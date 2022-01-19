@@ -65,7 +65,7 @@ class FinalizeOdsComponent {
                         logger.info("Creating tailorfile for RM")
                         steps.writeFile (
                             file: "${tailorFile}",
-                            content: 'exclude rolebinding,serviceaccount\n'
+                            text: 'exclude rolebinding,serviceaccount\n'
                         )
                         filesToStage << tailorFile
                     }
