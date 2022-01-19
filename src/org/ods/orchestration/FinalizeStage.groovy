@@ -227,6 +227,7 @@ class FinalizeStage extends Stage {
             file: project.envStateFileName,
             text: JsonOutput.prettyPrint(JsonOutput.toJson(envState))
         )
+        steps.sh("pwd && ls")
 
         def filesToCommit = [project.envStateFileName]
         def messageToCommit = "ODS: Record commits deployed into ${project.buildParams.targetEnvironmentToken}"

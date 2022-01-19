@@ -165,7 +165,7 @@ class OpenShiftService {
     }
 
     void tailorExport(String project, String selector, Map<String, String> envParams, String targetFile, String excludes = '') {
-        def selectorString = "${excludes}" + (selector ? "-l ${selector}" : '')
+        def selectorString = "${excludes}" + (selector ? " -l ${selector}" : '')
         doTailorExport(project, "${selectorString}", envParams, targetFile)
     }
 
