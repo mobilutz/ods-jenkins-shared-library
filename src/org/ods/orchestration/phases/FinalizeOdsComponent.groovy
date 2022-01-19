@@ -64,7 +64,7 @@ class FinalizeOdsComponent {
                     if (isRMrepo && !steps.fileExists(tailorFile)) {
                         logger.info("Creating tailorfile for RM")
                         steps.writeFile (
-                            file: "${tailorFile}"
+                            file: "${tailorFile}",
                             content: 'exclude rolebinding,serviceaccount\n'
                         )
                         filesToStage << tailorFile
