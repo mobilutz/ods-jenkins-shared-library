@@ -34,13 +34,13 @@ class FinalizeOdsComponent {
     public void run(Map repo, String baseDir, boolean verifyDeployments = true) {
         this.os = ServiceRegistry.instance.get(OpenShiftService)
         def componentSelector = "app=${project.key}"
-        def isRMrepo = (RELEASE_MANAGER_REPO_ID != repo.id)
+        def isRMrepo = (RELEASE_MANAGER_REPO_ID == repo.id)
 
         // we leave it completely open to the user what they want to export
         // (and THEY need to configure this thru a Tailorfile)
         if (!isRMrepo) {
             componentSelector += "-${repo.id}"
-        } 
+        }
 
         if (!baseDir) {
             baseDir = '.'
@@ -66,7 +66,7 @@ class FinalizeOdsComponent {
                         "Exporting current OpenShift state to folder '${openshiftDir}'."
                     )
                     os.tailorExport(
-                        isRMrepo ? project.targetProject : "${project.key}-cd",
+                        !isRMrepo ? project.targetProject : "${project.key}-cd",
                         componentSelector,
                         envParams,
                         OpenShiftService.EXPORTED_TEMPLATE_FILE
