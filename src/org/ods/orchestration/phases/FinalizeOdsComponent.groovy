@@ -17,6 +17,7 @@ import org.ods.orchestration.util.MROPipelineUtil
 @TypeChecked
 class FinalizeOdsComponent {
 
+    static final RELEASE_MANAGER_REPO_ID = "release-manager"
     private Project project
     private IPipelineSteps steps
     private GitService git
@@ -30,11 +31,24 @@ class FinalizeOdsComponent {
         this.logger = logger
     }
 
-    public void run(Map repo, String baseDir) {
+    public void run(Map repo, String baseDir, boolean verifyDeployments = true) {
         this.os = ServiceRegistry.instance.get(OpenShiftService)
-        def componentSelector = "app=${project.key}-${repo.id}"
+        def componentSelector = null
+        def isRMrepo = (RELEASE_MANAGER_REPO_ID != repo.id)
 
-        verifyDeploymentsBuiltByODS(repo, componentSelector)
+        // we leave it completely open to the user what they want to export
+        // (and THEY need to configure this thru a Tailorfile)
+        if (isRMrepo) {
+            componentSelector = "app=${project.key}-${repo.id}"
+        }
+
+        if (!baseDir) {
+            baseDir = '.'
+        }
+
+        if (verifyDeployments) {
+            verifyDeploymentsBuiltByODS(repo, componentSelector)
+        }
 
         def envParamsFile = project.environmentParamsFile
         def envParams = project.getEnvironmentParams(envParamsFile)
@@ -52,7 +66,7 @@ class FinalizeOdsComponent {
                         "Exporting current OpenShift state to folder '${openshiftDir}'."
                     )
                     os.tailorExport(
-                        project.targetProject,
+                        isRMrepo ? project.targetProject : "${project.key}-cd",
                         componentSelector,
                         envParams,
                         OpenShiftService.EXPORTED_TEMPLATE_FILE
@@ -65,10 +79,12 @@ class FinalizeOdsComponent {
                     // TODO: Display drift?
                 }
 
-                writeDeploymentDescriptor(repo)
+                if (verifyDeployments) {
+                    writeDeploymentDescriptor(repo)
+                    filesToStage << DeploymentDescriptor.FILE_NAME
+                }
 
                 logger.debugClocked("export-ocp-git-${repo.id}", (null as String))
-                filesToStage << DeploymentDescriptor.FILE_NAME
                 git.commit(filesToStage, "${commitMessage} [ci skip]")
                 logger.debugClocked("export-ocp-git-${repo.id}", (null as String))
             }
