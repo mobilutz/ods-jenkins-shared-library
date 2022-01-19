@@ -165,7 +165,7 @@ class OpenShiftService {
     }
 
     void tailorExport(String project, String selector, Map<String, String> envParams, String targetFile) {
-        doTailorExport(project, selector ? "-l ${selector}" : '', envParams, targetFile)
+        doTailorExport(project, "-l ${selector}", envParams, targetFile)
     }
 
     String rollout(String project, String kind, String name, int priorRevision, int timeoutMinutes) {
