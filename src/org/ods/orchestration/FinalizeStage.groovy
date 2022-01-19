@@ -227,7 +227,6 @@ class FinalizeStage extends Stage {
             file: project.envStateFileName,
             text: JsonOutput.prettyPrint(JsonOutput.toJson(envState))
         )
-        steps.sh("pwd && ls")
 
         def filesToCommit = [project.envStateFileName]
         def messageToCommit = "ODS: Record commits deployed into ${project.buildParams.targetEnvironmentToken}"
@@ -244,10 +243,9 @@ class FinalizeStage extends Stage {
 
         // export the cd namespace into the RM repo as template - to be able to recover it.
 
-        /* blocked by https://github.com/opendevstack/tailor/issues/245
         new FinalizeOdsComponent(project, steps, git, logger).
             run(['id': "${FinalizeOdsComponent.RELEASE_MANAGER_REPO_ID}"], '.', false)
-        */
+
         if (project.isWorkInProgress) {
             git.pushRef('master')
         } else {

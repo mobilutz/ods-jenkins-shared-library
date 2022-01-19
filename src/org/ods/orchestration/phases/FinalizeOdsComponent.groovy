@@ -69,13 +69,16 @@ class FinalizeOdsComponent {
                         )
                         filesToStage << tailorFile
                     }
-                    os.tailorExport(
-                        !isRMrepo ? project.targetProject : "${project.key}-cd",
-                        componentSelector,
-                        envParams,
-                        OpenShiftService.EXPORTED_TEMPLATE_FILE
-                    )
-                    filesToStage << OpenShiftService.EXPORTED_TEMPLATE_FILE
+                    /* blocked by https://github.com/opendevstack/tailor/issues/245 */
+                    if (!isRMrepo) {
+                        os.tailorExport(
+                            !isRMrepo ? project.targetProject : "${project.key}-cd",
+                            componentSelector,
+                            envParams,
+                            OpenShiftService.EXPORTED_TEMPLATE_FILE
+                        )
+                        filesToStage << OpenShiftService.EXPORTED_TEMPLATE_FILE
+                    }
                     logger.debugClocked("export-ocp-${repo.id}", (null as String))
                 } else {
                     commitMessage = "ODS: Export Openshift deployment state " +
