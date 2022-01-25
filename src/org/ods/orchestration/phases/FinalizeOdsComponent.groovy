@@ -78,7 +78,7 @@ class FinalizeOdsComponent {
                         logger.info(steps.readFile(OpenShiftService.TAILOR_FILE_NAME))
                         filesToStage << OpenShiftService.TAILOR_FILE_NAME
                     }
-                /* blocked by https://github.com/opendevstack/tailor/issues/245 */
+                    /* blocked by https://github.com/opendevstack/tailor/issues/245 */
                     os.tailorExport(
                         !isRMrepo ? project.targetProject : "${project.key}-cd",
                         componentSelector,

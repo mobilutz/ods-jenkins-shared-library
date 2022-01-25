@@ -1517,11 +1517,11 @@ class Project {
     }
 
     String getCdNamespaceExportSelector() {
-        return this.data.metadata?.cdNamespaceExportSelector
+        return this.data.metadata?.cdNamespaceExportSelector ?: ''
     }
 
     String getCdNamespaceIncludedResources() {
-        return this.data.metadata?.cdNamespaceExportIncludedResources
+        return this.data.metadata?.cdNamespaceExportIncludedResources ?: ''
     }
 
     /**
