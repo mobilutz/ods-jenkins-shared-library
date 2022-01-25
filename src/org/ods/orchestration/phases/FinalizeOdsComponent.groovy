@@ -71,9 +71,9 @@ class FinalizeOdsComponent {
                                 'exclude rolebinding,serviceaccount\n' +
                                 "${selector}\n"
                         )
-                        filesToStage << tailorFile
+                        filesToStage << OpenShiftService.TAILOR_FILE_NAME
                     }
-                    /* blocked by https://github.com/opendevstack/tailor/issues/245 */
+                /* blocked by https://github.com/opendevstack/tailor/issues/245 */
                     os.tailorExport(
                         !isRMrepo ? project.targetProject : "${project.key}-cd",
                         componentSelector,
