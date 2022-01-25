@@ -1516,6 +1516,13 @@ class Project {
         new ProjectDataBitbucketRepository(steps).loadFile(savedVersion)
     }
 
+    String getCdNamespaceExportSelector() {
+        return this.data.metadata?.cdNamespaceExportSelector
+    }
+
+    String getCdNamespaceIncludedResources() {
+        return this.data.metadata?.cdNamespaceExportIncludedResources
+    }
 
     /**
      * Saves the project data to the

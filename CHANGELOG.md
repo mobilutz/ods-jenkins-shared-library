@@ -71,6 +71,7 @@
 - RM: test component causes new jenkins (run) instance after branch is created for release 
 ([#823](https://github.com/opendevstack/ods-jenkins-shared-library/issues/823))
 - Improve error message when two coded tests are linked to the same test issue ([#826](https://github.com/opendevstack/ods-jenkins-shared-library/pull/826))
+- Export -cd namespace during RM release run for backup ([#828](https://github.com/opendevstack/ods-jenkins-shared-library/issues/828))
 
 ## [3.0] - 2020-08-11
 

@@ -35,8 +35,6 @@ class FinalizeOdsComponent {
         this.os = ServiceRegistry.instance.get(OpenShiftService)
         def componentSelector = "app=${project.key}-${repo.id}"
         def isRMrepo = (RELEASE_MANAGER_REPO_ID == repo.id)
-        def tailorFile = 'Tailorfile'
-        def excludes = ''
 
         if (!baseDir) {
             baseDir = '.'
@@ -61,11 +59,17 @@ class FinalizeOdsComponent {
                         "export-ocp-${repo.id}",
                         "Exporting current OpenShift state to folder '${openshiftDir}'."
                     )
-                    if (isRMrepo && !steps.fileExists(tailorFile)) {
-                        logger.info("Creating tailorfile for RM")
+                    if (isRMrepo && !steps.fileExists(OpenShiftService.TAILOR_FILE_NAME)) {
+                        def selector = project.cdNamespaceExportSelector
+                        if (selector) {
+                            selector = "selector ${selector}"
+                        }
+                        logger.info('!!!! Creating tailorfile for RM -- customize for YOUR export needs')
                         steps.writeFile (
-                            file: "${tailorFile}",
-                            text: 'exclude rolebinding,serviceaccount\n'
+                            file: "${OpenShiftService.TAILOR_FILE_NAME}",
+                            text: "${project.cdNamespaceIncludedResources}\n" +
+                                'exclude rolebinding,serviceaccount\n' +
+                                "${selector}\n"
                         )
                         filesToStage << tailorFile
                     }
