@@ -36,6 +36,10 @@ class FinalizeOdsComponent {
         def componentSelector = "app=${project.key}-${repo.id}"
         def isRMrepo = (RELEASE_MANAGER_REPO_ID == repo.id)
 
+        if (isRMrepo) {
+            componentSelector = null
+        }
+
         if (!baseDir) {
             baseDir = '.'
         }
@@ -71,6 +75,7 @@ class FinalizeOdsComponent {
                                 'exclude rolebinding,serviceaccount\n' +
                                 "${selector}\n"
                         )
+                        logger.info(steps.readFile(OpenShiftService.TAILOR_FILE_NAME))
                         filesToStage << OpenShiftService.TAILOR_FILE_NAME
                     }
                 /* blocked by https://github.com/opendevstack/tailor/issues/245 */
