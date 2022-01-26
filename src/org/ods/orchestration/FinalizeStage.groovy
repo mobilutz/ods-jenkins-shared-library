@@ -243,7 +243,7 @@ class FinalizeStage extends Stage {
 
         // export the cd namespace into the RM repo as template - to be able to recover it.
         new FinalizeOdsComponent(project, steps, git, logger).
-            run(['id': "${FinalizeOdsComponent.RELEASE_MANAGER_REPO_ID}"], '.', false)
+            run(['id': "${FinalizeOdsComponent.RELEASE_MANAGER_REPO_ID}"], '.')
 
         // open - do we want to merge the state of -cd back into master? ..
         filesToCommit << "openshift-exported/${OpenShiftService.TAILOR_FILE_NAME}"

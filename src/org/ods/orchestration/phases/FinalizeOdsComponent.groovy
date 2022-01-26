@@ -31,20 +31,14 @@ class FinalizeOdsComponent {
         this.logger = logger
     }
 
-    public void run(Map repo, String baseDir, boolean verifyDeployments = true) {
+    public void run(Map repo, String baseDir) {
         this.os = ServiceRegistry.instance.get(OpenShiftService)
         def componentSelector = "app=${project.key}-${repo.id}"
         def isRMrepo = (RELEASE_MANAGER_REPO_ID == repo.id)
 
         if (isRMrepo) {
             componentSelector = null
-        }
-
-        if (!baseDir) {
-            baseDir = '.'
-        }
-
-        if (verifyDeployments) {
+        } else {
             verifyDeploymentsBuiltByODS(repo, componentSelector)
         }
 
@@ -63,22 +57,23 @@ class FinalizeOdsComponent {
                         "export-ocp-${repo.id}",
                         "Exporting current OpenShift state to folder '${openshiftDir}'."
                     )
+                    // create RM -cd namespace tailor export
                     if (isRMrepo && !steps.fileExists(OpenShiftService.TAILOR_FILE_NAME)) {
                         def selector = project.cdNamespaceExportSelector
                         if (selector) {
                             selector = "selector ${selector}"
                         }
-                        logger.info('!!!! Creating tailorfile for RM -- customize for YOUR export needs')
+                        logger.info('!!!! Creating tailorfile for -cd namespace' +
+                            '-- customize for YOUR export needs')
                         steps.writeFile (
                             file: "${OpenShiftService.TAILOR_FILE_NAME}",
                             text: "${project.cdNamespaceIncludedResources}\n" +
                                 'exclude rolebinding,serviceaccount,secret,bc,is\n' +
+                                'trim-annotation pv.kubernetes.io/\n' +
                                 "${selector}\n"
                         )
-                        logger.info(steps.readFile(OpenShiftService.TAILOR_FILE_NAME))
                         filesToStage << OpenShiftService.TAILOR_FILE_NAME
                     }
-                    /* blocked by https://github.com/opendevstack/tailor/issues/245 */
                     os.tailorExport(
                         !isRMrepo ? project.targetProject : "${project.key}-cd",
                         componentSelector,
@@ -93,7 +88,7 @@ class FinalizeOdsComponent {
                     // TODO: Display drift?
                 }
 
-                if (verifyDeployments) {
+                if (isRMrepo) {
                     writeDeploymentDescriptor(repo)
                     filesToStage << DeploymentDescriptor.FILE_NAME
                 }
