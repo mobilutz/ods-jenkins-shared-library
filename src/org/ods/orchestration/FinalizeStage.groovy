@@ -230,7 +230,7 @@ class FinalizeStage extends Stage {
 
         def filesToCommit = [project.envStateFileName]
         def messageToCommit = "ODS: Record commits deployed into ${project.buildParams.targetEnvironmentToken}"
-        if (! project.isWorkInProgress) {
+        if (! project.isWorkInProgress && project.versionName) {
             def projectDataFileNames =  project.saveProjectData()
             filesToCommit.addAll(projectDataFileNames)
             messageToCommit = messageToCommit + " and data of version ${project.getVersionName()}"
@@ -246,7 +246,7 @@ class FinalizeStage extends Stage {
             run(['id': "${FinalizeOdsComponent.RELEASE_MANAGER_REPO_ID}"], '.', false)
 
         // open - do we want to merge the state of -cd back into master? ..
-        filesToCommit << OpenShiftService.EXPORTED_TEMPLATE_FILE
+        filesToCommit << "openshift-exported/${OpenShiftService.TAILOR_FILE_NAME}"
 
         if (project.isWorkInProgress) {
             git.pushRef('master')
