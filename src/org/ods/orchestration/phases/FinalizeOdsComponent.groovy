@@ -72,7 +72,7 @@ class FinalizeOdsComponent {
                         steps.writeFile (
                             file: "${OpenShiftService.TAILOR_FILE_NAME}",
                             text: "${project.cdNamespaceIncludedResources}\n" +
-                                'exclude rolebinding,serviceaccount\n' +
+                                'exclude rolebinding,serviceaccount,secret,bc,is\n' +
                                 "${selector}\n"
                         )
                         logger.info(steps.readFile(OpenShiftService.TAILOR_FILE_NAME))

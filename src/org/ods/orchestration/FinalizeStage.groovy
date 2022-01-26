@@ -246,6 +246,7 @@ class FinalizeStage extends Stage {
             run(['id': "${FinalizeOdsComponent.RELEASE_MANAGER_REPO_ID}"], '.', false)
 
         // open - do we want to merge the state of -cd back into master? ..
+        filesToCommit << OpenShiftService.EXPORTED_TEMPLATE_FILE
 
         if (project.isWorkInProgress) {
             git.pushRef('master')
