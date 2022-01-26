@@ -37,7 +37,7 @@ class FinalizeOdsComponent {
         def isRMrepo = (RELEASE_MANAGER_REPO_ID == repo.id)
 
         if (isRMrepo) {
-            componentSelector = null
+            componentSelector = ''
         } else {
             verifyDeploymentsBuiltByODS(repo, componentSelector)
         }
@@ -68,15 +68,13 @@ class FinalizeOdsComponent {
                         )
                         filesToStage << OpenShiftService.TAILOR_FILE_NAME
                     }
-                    if (!isRMrepo) {
-                        os.tailorExport(
-                            !isRMrepo ? project.targetProject : "${project.key}-cd",
-                            componentSelector,
-                            envParams,
-                            OpenShiftService.EXPORTED_TEMPLATE_FILE
-                        )
-                        filesToStage << OpenShiftService.EXPORTED_TEMPLATE_FILE
-                    }
+                    os.tailorExport(
+                        !isRMrepo ? project.targetProject : "${project.key}-cd",
+                        componentSelector,
+                        envParams,
+                        OpenShiftService.EXPORTED_TEMPLATE_FILE
+                    )
+                    filesToStage << OpenShiftService.EXPORTED_TEMPLATE_FILE
                     logger.debugClocked("export-ocp-${repo.id}", (null as String))
                 } else {
                     commitMessage = "ODS: Export Openshift deployment state " +
