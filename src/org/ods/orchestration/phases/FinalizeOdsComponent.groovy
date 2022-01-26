@@ -59,18 +59,12 @@ class FinalizeOdsComponent {
                     )
                     // create RM -cd namespace tailor export
                     if (isRMrepo && !steps.fileExists(OpenShiftService.TAILOR_FILE_NAME)) {
-                        def selector = project.cdNamespaceExportSelector
-                        if (selector) {
-                            selector = "selector ${selector}"
-                        }
                         logger.info('!!!! Creating tailorfile for -cd namespace' +
                             '-- customize for YOUR export needs')
                         steps.writeFile (
                             file: "${OpenShiftService.TAILOR_FILE_NAME}",
-                            text: "${project.cdNamespaceIncludedResources}\n" +
-                                'exclude rolebinding,serviceaccount,secret,bc,is\n' +
-                                'trim-annotation pv.kubernetes.io/\n' +
-                                "${selector}\n"
+                            text: 'exclude rolebinding,serviceaccount,secret,bc,is\n' +
+                                'trim-annotation pv.kubernetes.io/\n'
                         )
                         filesToStage << OpenShiftService.TAILOR_FILE_NAME
                     }
