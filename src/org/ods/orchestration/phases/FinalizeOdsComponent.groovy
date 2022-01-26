@@ -84,7 +84,7 @@ class FinalizeOdsComponent {
                     // TODO: Display drift?
                 }
 
-                if (isRMrepo) {
+                if (!isRMrepo) {
                     writeDeploymentDescriptor(repo)
                     filesToStage << DeploymentDescriptor.FILE_NAME
                 }
