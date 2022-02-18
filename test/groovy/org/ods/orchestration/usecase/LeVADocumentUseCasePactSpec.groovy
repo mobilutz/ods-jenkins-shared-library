@@ -107,14 +107,16 @@ class LeVADocumentUseCasePactSpec extends Specification {
 
     private String executeLeVADocumentUseCaseMethod(ProjectFixture projectFixture, String wiremockURL) {
         LeVADocumentUseCase useCase = getLevaDocUseCaseFactory(projectFixture).loadProject(projectFixture).build(wiremockURL)
-        return useCase."create${projectFixture.docType}"()
+        return useCase.create(projectFixture.docType)
+//        return useCase."create${projectFixture.docType}"()
     }
 
     private String executeLeVADocumentUseCaseMethodWithComponent(ProjectFixture projectFixture, String wiremockURL) {
         LeVADocumentUseCase useCase = getLevaDocUseCaseFactory(projectFixture).loadProject(projectFixture).build(wiremockURL)
         Map repo = RepoDataBuilder.getRepoForComponent(projectFixture.getComponent())
         //TODO tests data
-        return useCase."create${projectFixture.docType}"(repo, [tests: 'cosas'])
+        return useCase.create(projectFixture.docType, repo, [tests: 'cosas'])
+//        return useCase."create${projectFixture.docType}"(repo, [tests: 'cosas'])
     }
 
     private Closure defaultBodyParams(){

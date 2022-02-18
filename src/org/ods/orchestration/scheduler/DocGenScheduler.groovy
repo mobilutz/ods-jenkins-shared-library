@@ -26,7 +26,7 @@ abstract class DocGenScheduler {
     @NonCPS
     protected String getMethodNameForDocumentType(String documentType) {
         def name = documentType.replaceAll("OVERALL_", "Overall")
-        return "create${name}"
+        return "${name}"
     }
 
     @NonCPS
@@ -48,15 +48,15 @@ abstract class DocGenScheduler {
     void run(String phase, MROPipelineUtil.PipelinePhaseLifecycleStage stage, Map repo = null, Map data = null) {
         def documents = this.usecase.getSupportedDocuments()
         documents.each { documentType ->
-            def args = [repo, data]
-            def argsDefined = args.findAll()
+//            def args = [repo, data]
+//            def argsDefined = args.findAll()
 
-            def paramsSize = this.getMethodParamsSizeForDocumentType(documentType)
-            if (argsDefined.size() > paramsSize) {
-                return
-            }
+//            def paramsSize = this.getMethodParamsSizeForDocumentType(documentType)
+//            if (argsDefined.size() > paramsSize) {
+//                return
+//            }
 
-            def paramsToApply = paramsSize > 0 ? args[0..(Math.min(args.size(), paramsSize) - 1)] : []
+//            def paramsToApply = paramsSize > 0 ? args[0..(Math.min(args.size(), paramsSize) - 1)] : []
 
             if (this.isDocumentApplicable(documentType, phase, stage, repo)) {
                 def message = "Creating document of type '${documentType}' for project '${this.project.key}'"
@@ -66,7 +66,7 @@ abstract class DocGenScheduler {
                 this.steps.echo(message)
 
                 // Apply args according to the method's parameters length
-                this.usecase.invokeMethod(this.getMethodNameForDocumentType(documentType), paramsToApply as Object[])
+                this.usecase.create(this.getMethodNameForDocumentType(documentType), repo, data)
             }
         }
     }

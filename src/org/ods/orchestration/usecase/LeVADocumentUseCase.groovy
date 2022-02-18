@@ -1,11 +1,9 @@
 package org.ods.orchestration.usecase
 
 import com.cloudbees.groovy.cps.NonCPS
-import org.ods.orchestration.mapper.ComponentDataLeVADocumentParamsMapper
-import org.ods.orchestration.mapper.DefaultLeVADocumentParamsMapper
-import org.ods.orchestration.mapper.TestDataLeVADocumentParamsMapper
 import org.ods.orchestration.service.DocGenService
 import org.ods.orchestration.service.LeVADocumentChaptersFileService
+import org.ods.orchestration.usecase.document.DocumentUseCase
 import org.ods.orchestration.util.MROPipelineUtil
 import org.ods.orchestration.util.PDFUtil
 import org.ods.orchestration.util.Project
@@ -14,9 +12,7 @@ import org.ods.services.NexusService
 import org.ods.services.OpenShiftService
 import org.ods.util.ILogger
 import org.ods.util.IPipelineSteps
-
-import static groovy.json.JsonOutput.prettyPrint
-import static groovy.json.JsonOutput.toJson
+import org.reflections.Reflections
 
 class LeVADocumentUseCase {
 
@@ -111,6 +107,7 @@ class LeVADocumentUseCase {
     private final SonarQubeUseCase sq
     private final BitbucketTraceabilityUseCase bbt
     private final ILogger logger
+    private Set<DocumentUseCase> useCases
 
     LeVADocumentUseCase(Project project, IPipelineSteps steps, MROPipelineUtil util, DocGenService docGen,
                         JenkinsService jenkins, JiraUseCase jiraUseCase, JUnitTestReportsUseCase junit,
@@ -130,126 +127,55 @@ class LeVADocumentUseCase {
         this.sq = sq
         this.bbt = bbt
         this.logger = logger
-        this.projectId = project.getJiraProjectKey()
-        this.buildNumber = project.steps.env.BUILD_NUMBER
+        this.projectId = (project != null) ? project.getJiraProjectKey() : null
+        this.buildNumber = (project != null) ? project.steps.env.BUILD_NUMBER : null
+
+        Reflections reflections = new Reflections("org.ods.orchestration.usecase.document");
+
+        //instantiate all the DocumentUseCase subclasses
+        this.useCases = reflections.getSubTypesOf(DocumentUseCase.class).collect{
+            useCaseClass -> useCaseClass.getConstructor().newInstance()
+        }
     }
 
-    String createCSD(Map repo = null, Map data = null) {
-        return createDocWithDefaultParams(DocumentType.CSD)
+    String create(String documentType, Map repo = null, Map testData = null) {
+
+        for (useCase in useCases) {
+            if (useCase.apply(documentType)) {
+                return useCase.create(logger, project, steps, projectId, buildNumber, docGen, testData, repo)
+            }
+        }
+
+        throw new RuntimeException("error strategy not found for documentType: " + documentType);
     }
 
-    String createDIL(Map repo = null, Map data = null) {
-        return createDocWithDefaultParams(DocumentType.DIL)
-    }
-
-    String createDTP(Map repo = null, Map data = null) {
-        return createDocWithDefaultParams(DocumentType.DTP)
-    }
-
-    String createRA(Map repo = null, Map data = null) {
-        return createDocWithDefaultParams(DocumentType.RA)
-    }
-
-    String createCFTP(Map repo = null, Map data = null) {
-        return createDocWithDefaultParams(DocumentType.CFTP)
-    }
-
-    String createIVP(Map repo = null, Map data = null) {
-        return createDocWithDefaultParams(DocumentType.IVP)
-    }
-
-    String createSSDS(Map repo = null, Map data = null) {
-        return createDocWithDefaultParams(DocumentType.SSDS)
-    }
-
-    String createTCP(Map repo = null, Map data = null) {
-        return createDocWithDefaultParams(DocumentType.TCP)
-    }
-
-    String createTIP(Map repo = null, Map data = null) {
-        return createDocWithDefaultParams(DocumentType.TIP)
-    }
-
-    String createTRC(Map repo = null, Map data = null) {
-        return createDocWithDefaultParams(DocumentType.TRC)
-    }
-
-    String createTCR(Map repo = null, Map data) {
-        return createDocWithDefaultParams(DocumentType.TRC)
-    }
-
-    String createDTR(Map repo, Map data) {
-        return createDocWithComponentDataParams(DocumentType.DTR, repo, data)
-    }
-
-    String createOverallDTR(Map repo = null, Map data = null) {
-        def documentTypeName = DOCUMENT_TYPE_NAMES[DocumentType.OVERALL_DTR as String]
-        def uri = ""
-        return uri
-    }
-
-    String createCFTR(Map repo = null, Map data) {
-        logger.debug("createCFTR - data:${data}")
-
-        def uri = ""
-        return uri
-    }
-
-    String createIVR(Map repo = null, Map data) {
-        logger.debug("createIVR - data:${data}")
-        def uri = ""
-        return uri
-    }
-
-    String createTIR(Map repo, Map data) {
-        return createDocWithComponentDataParams(DocumentType.TIR, repo, data)
-    }
-
-    String createOverallTIR(Map repo = null, Map data = null) {
-        def documentTypeName = DOCUMENT_TYPE_NAMES[DocumentType.OVERALL_TIR as String]
-        def uri = ""
-        return uri
-    }
+//    String createOverallDTR(Map repo = null, Map data = null) {
+//        def documentTypeName = DOCUMENT_TYPE_NAMES[DocumentType.OVERALL_DTR as String]
+//        def uri = ""
+//        return uri
+//    }
+//
+//    String createCFTR(Map repo = null, Map data) {
+//        logger.debug("createCFTR - data:${data}")
+//
+//        def uri = ""
+//        return uri
+//    }
+//
+//    String createIVR(Map repo = null, Map data) {
+//        logger.debug("createIVR - data:${data}")
+//        def uri = ""
+//        return uri
+//    }
+//
+//    String createOverallTIR(Map repo = null, Map data = null) {
+//        def documentTypeName = DOCUMENT_TYPE_NAMES[DocumentType.OVERALL_TIR as String]
+//        def uri = ""
+//        return uri
+//    }
 
     @NonCPS
     List<String> getSupportedDocuments() {
         return DocumentType.values().collect { it as String }
     }
-
-    private String createDocWithDefaultParams(DocumentType documentType) {
-        logger.info("create document ${documentType} start")
-        Map data = getDefaultParams()
-        Map document = docGen.createDocument(projectId, buildNumber, documentType.toString(), data)
-        logger.info("create document ${documentType} return:${document.nexusURL}")
-        return document.nexusURL
-    }
-
-    private String createDocWithTestDataParams(DocumentType documentType, Map testData) {
-        logger.info("create document ${documentType} start, data:${prettyPrint(toJson(testData))}")
-        Map data = getTestDataParams(testData)
-        Map document = docGen.createDocument(projectId, buildNumber, documentType.toString(), data)
-        logger.info("create document ${documentType} return:${document.nexusURL}")
-        return document.nexusURL
-    }
-
-    private String createDocWithComponentDataParams(DocumentType documentType, Map repo, Map testData) {
-        logger.info("create document ${documentType} start, repo:${prettyPrint(toJson(repo))}, data:${prettyPrint(toJson(testData))}")
-        Map data = getComponentDataParams(testData, repo)
-        Map document = docGen.createDocument(projectId, buildNumber, documentType.toString(), data)
-        logger.info("create document ${documentType} return:${document.nexusURL}")
-        return document.nexusURL
-    }
-
-    Map getDefaultParams() {
-        return new DefaultLeVADocumentParamsMapper(this.project, this.steps).build()
-    }
-
-    Map getTestDataParams(Map testData) {
-        return new TestDataLeVADocumentParamsMapper(this.project, this.steps, testData).build()
-    }
-
-    Map getComponentDataParams(Map testData, Map repo) {
-        return new ComponentDataLeVADocumentParamsMapper(this.project, this.steps, testData, repo).build()
-    }
-
 }

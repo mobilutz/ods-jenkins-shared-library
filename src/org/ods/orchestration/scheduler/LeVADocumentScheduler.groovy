@@ -378,7 +378,7 @@ class LeVADocumentScheduler extends DocGenScheduler {
 
         documents.each { documentType ->
             if (this.isDocumentApplicableForEnvironment(documentType, environment)) {
-                def args = [repo, data]
+//                def args = [repo, data]
                 if (this.isDocumentApplicable(documentType, phase, stage, repo)) {
                     def message = "Creating document of type '${documentType}' for project '${this.project.key}'"
                     def debugKey = "docgen-${this.project.key}-${documentType}"
@@ -392,7 +392,7 @@ class LeVADocumentScheduler extends DocGenScheduler {
                         try {
                             // Apply args according to the method's parameters length
                             def method = this.getMethodNameForDocumentType(documentType)
-                            this.usecase.invokeMethod(method, args as Object[])
+                            this.usecase.create(method, repo, data)
                         } catch (e) {
                             throw new IllegalStateException("Error: ${message} has failed: ${e.message}.", e)
                         }
