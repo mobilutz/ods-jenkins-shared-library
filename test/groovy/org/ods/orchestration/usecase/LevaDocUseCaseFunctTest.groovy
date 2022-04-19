@@ -3,19 +3,17 @@ package org.ods.orchestration.usecase
 import groovy.util.logging.Slf4j
 import org.junit.Rule
 import org.junit.rules.TemporaryFolder
+import org.ods.core.test.service.BitbucketServiceForWiremock
 import org.ods.core.test.usecase.LevaDocUseCaseFactory
 import org.ods.core.test.usecase.RepoDataBuilder
-import org.ods.core.test.usecase.levadoc.fixture.DocTypeProjectFixture
-import org.ods.core.test.usecase.levadoc.fixture.DocTypeProjectFixtureWithComponent
-import org.ods.core.test.usecase.levadoc.fixture.DocTypeProjectFixtureWithTestData
-import org.ods.core.test.usecase.levadoc.fixture.DocTypeProjectFixturesOverall
-import org.ods.core.test.usecase.levadoc.fixture.LevaDocDataFixture
+import org.ods.core.test.usecase.levadoc.fixture.DocTypeProjectFixtureBase
 import org.ods.core.test.usecase.levadoc.fixture.ProjectFixture
-import org.ods.services.BitbucketService
+import org.ods.core.test.wiremock.WiremockServers
 import org.ods.services.GitService
 import org.ods.services.JenkinsService
 import org.ods.services.OpenShiftService
 import org.ods.util.UnirestConfig
+import spock.lang.Shared
 import spock.lang.Specification
 import spock.lang.Unroll
 import util.FixtureHelper
@@ -60,6 +58,9 @@ class LevaDocUseCaseFunctTest extends Specification {
 
     LevaDocWiremock levaDocWiremock
 
+    @Shared
+    private DocTypeProjectFixtureBase docTypeProjectFixtureBase = new DocTypeProjectFixtureBase()
+
     def setup() {
         UnirestConfig.init()
     }
@@ -84,8 +85,8 @@ class LevaDocUseCaseFunctTest extends Specification {
     }
 
     private List<ProjectFixture> getAllProjectFixtures() {
-        List<ProjectFixture> projects = new DocTypeProjectFixture().getProjects()
-        projects.addAll(new DocTypeProjectFixtureWithTestData().getProjects())
+        List<ProjectFixture> projects = docTypeProjectFixtureBase.getProjects(DocTypeProjectFixtureBase.DOC_TYPES_BASIC)
+        projects.addAll(docTypeProjectFixtureBase.getProjects(DocTypeProjectFixtureBase.DOC_TYPES_WITH_TEST_DATA))
         return projects
     }
 
@@ -102,7 +103,7 @@ class LevaDocUseCaseFunctTest extends Specification {
         true // TODO
 
         where: "Doctypes creation with repo and data params"
-        projectFixture << new DocTypeProjectFixtureWithComponent().getProjects()
+        projectFixture << docTypeProjectFixtureBase.getProjects(DocTypeProjectFixtureBase.DOC_TYPES_WITH_COMPONENT)
     }
 
     /**
@@ -121,7 +122,7 @@ class LevaDocUseCaseFunctTest extends Specification {
         true // TODO
 
         where:
-        projectFixture << new DocTypeProjectFixturesOverall().getProjects()
+        projectFixture << docTypeProjectFixtureBase.getProjects(DocTypeProjectFixtureBase.DOC_TYPES_OVERALL)
     }
 
     // WARNING: The following method uploads the test results needed by docGen
@@ -166,7 +167,11 @@ class LevaDocUseCaseFunctTest extends Specification {
         jenkinsLogJobRes == "repository/leva-documentation/${projectFixture.project}/${buildNumber}/jenkins-job-log.zip"
 
         where:
-        projectFixture = new DocTypeProjectFixture().getProjects().stream()
+        projectFixture = getOneDocProject()
+    }
+
+    private ProjectFixture getOneDocProject() {
+        docTypeProjectFixtureBase.getProjects(DocTypeProjectFixtureBase.DOC_TYPES_BASIC).stream()
             .filter({ProjectFixture project -> project.project == "ordgp"})
             .collect(Collectors.toList())
             .get(0)
@@ -190,7 +195,7 @@ class LevaDocUseCaseFunctTest extends Specification {
 
         OpenShiftService openShiftService = Mock(OpenShiftService)
         GitService gitService = Mock(GitService)
-        BitbucketService bitbucketService = Mock(BitbucketService)
+        BitbucketServiceForWiremock bitbucketService = getBitBucketService()
         BitbucketTraceabilityUseCase bbT = Spy(new BitbucketTraceabilityUseCase(bitbucketService, null, null))
         bbT.generateSourceCodeReviewFile() >> new FixtureHelper()
             .getResource(BitbucketTraceabilityUseCaseSpec.EXPECTED_BITBUCKET_CSV).getAbsolutePath()
@@ -207,6 +212,12 @@ class LevaDocUseCaseFunctTest extends Specification {
 
         return levaDocUseCaseFactory.build(projectFixture, useExpectedComponentDocs)
 
+    }
+
+    BitbucketServiceForWiremock getBitBucketService() {
+        String bitbucketUrl = levaDocWiremock.bitbucketServer.server().baseUrl()
+        return Spy(new BitbucketServiceForWiremock(bitbucketUrl,
+            WiremockServers.BITBUCKET.getUser(), WiremockServers.BITBUCKET.getPassword()))
     }
 
 }

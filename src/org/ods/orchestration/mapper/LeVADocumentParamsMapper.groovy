@@ -1,5 +1,6 @@
 package org.ods.orchestration.mapper
 
+import org.ods.orchestration.usecase.LeVADocumentUseCase
 import org.ods.orchestration.util.Project
 
 class LeVADocumentParamsMapper {
@@ -10,7 +11,19 @@ class LeVADocumentParamsMapper {
         this.project = project
     }
 
-    Map build(Map data = [: ]) {
+    Map<String, Map<String, ?>> getParams(LeVADocumentUseCase.DocumentType documentType, Map repo, Map data) {
+        if (documentType.isDTR() || documentType.isTIR()) {
+            return build([tests: data, repo: repo])
+        }
+
+        if (documentType.isOverallTIR() || documentType.isTIP()) {
+            return build([ repositories: buildRepositoriesData() ])
+        }
+
+        return build()
+    }
+
+    Map build(Map data = [:]) {
         return [
             build: mapBuildData(),
             git: mapGitData(),
@@ -18,6 +31,41 @@ class LeVADocumentParamsMapper {
                 targetApiUrl: this.project.getOpenShiftApiUrl() //TODO is different?
             ],
         ] << data
+    }
+
+    Map buildWithRepositories() {
+
+    }
+
+    protected List buildRepositoriesData() {
+        List result = []
+        for (Map repo: project.repositories) {
+            result << [ buildRepoData(repo) ]
+        }
+        return result
+    }
+
+    protected Map buildRepoData(Map repo) {
+        Map gitMap = repo.data.git ? repo.data.git: [:]
+        Map repoData = [
+            "id": "${repo.id}",
+            "type": "${repo.type}",
+            "data": [
+                "git": [
+                    "branch": gitMap.branch,
+                    "commit": gitMap.commit,
+                    "baseTag": gitMap.baseTag,
+                    "targetTag": gitMap.targetTag,
+                ]
+            ]
+        ]
+
+        // Is null until finalize stage.
+        if (gitMap.createdExecutionCommit) {
+            repoData.data.git["createdExecutionCommit"] = gitMap.createdExecutionCommit
+        }
+
+        return repoData
     }
 
     private Map<String, Object> mapGitData() {
@@ -52,5 +100,4 @@ class LeVADocumentParamsMapper {
             jenkinsLog: this.project.buildParams.jenkinsLog,
         ]
     }
-
 }
