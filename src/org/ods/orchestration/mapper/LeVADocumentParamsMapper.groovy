@@ -17,7 +17,7 @@ class LeVADocumentParamsMapper {
         }
 
         if (documentType.isOverallTIR() || documentType.isTIP()) {
-            return buildWithRepositories()
+            return build([ repositories: buildRepositoriesData() ])
         }
 
         return build()
@@ -33,9 +33,6 @@ class LeVADocumentParamsMapper {
         ] << data
     }
 
-    Map buildWithRepositories() {
-        build() << [ repositories: buildRepositoriesData() ]
-    }
 
     protected List buildRepositoriesData() {
         List result = []
@@ -47,19 +44,23 @@ class LeVADocumentParamsMapper {
 
     protected Map buildRepoData(Map repo) {
         Map gitMap = repo.data.git ? repo.data.git: [:]
-        return [
+        Map repoData = [
             "id": "${repo.id}",
             "type": "${repo.type}",
             "data": [
                 "git": [
                     "branch": gitMap.branch,
                     "commit": gitMap.commit,
-                    "createdExecutionCommit": gitMap.createdExecutionCommit,
                     "baseTag": gitMap.baseTag,
                     "targetTag": gitMap.targetTag,
                 ]
             ]
         ]
+
+        // Is null until finalize stage.
+        repoData.data.git["createdExecutionCommit"] = gitMap.createdExecutionCommit ?: ""
+
+        return repoData
     }
 
     private Map<String, Object> mapGitData() {
