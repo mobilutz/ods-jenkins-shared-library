@@ -3,7 +3,9 @@ package org.ods.orchestration.usecase
 import com.cloudbees.groovy.cps.NonCPS
 import org.ods.orchestration.parser.JUnitParser
 import org.ods.orchestration.service.JiraService
-import org.ods.orchestration.util.ConcurrentCache
+import org.ods.util.cache.BoundedCache
+import org.ods.util.cache.Cache
+import org.ods.util.cache.CachePolicy
 import org.ods.util.IPipelineSteps
 import org.ods.util.ILogger
 import org.ods.orchestration.util.MROPipelineUtil
@@ -12,6 +14,9 @@ import org.ods.orchestration.util.Project.JiraDataItem
 
 @SuppressWarnings(['IfStatementBraces', 'LineLength'])
 class JiraUseCase {
+
+    private static final int CACHE_MAX_SIZE = 764 // Enough for 32 releases.
+    private static final int CACHE_INITIAL_CAPACITY = 24 // Documentation issues in one release.
 
     class IssueTypes {
         static final String DOCUMENTATION_TRACKING = 'Documentation'
@@ -36,7 +41,7 @@ class JiraUseCase {
     private AbstractJiraUseCaseSupport support
     private MROPipelineUtil util
     private ILogger logger
-    private ConcurrentCache docVersions
+    private Cache<String, Long> docVersions
 
     JiraUseCase(Project project, IPipelineSteps steps, MROPipelineUtil util, JiraService jira, ILogger logger) {
         this.project = project
@@ -50,19 +55,15 @@ class JiraUseCase {
                 this.project.getJiraFieldsForIssueType(IssueTypes.DOCUMENTATION_TRACKING)
             def documentVersionField = documentationTrackingIssueFields[CustomIssueFields.DOCUMENT_VERSION].id as String
             def version = 0L
-            def versionField =
+            String versionField =
                 this.jira.getTextFieldsOfIssue(key as String, [documentVersionField])?.getAt(documentVersionField)
             if (versionField) {
-                try {
-                    version = versionField.toLong()
-                } catch (NumberFormatException _) {
-                    version = 0L
-                }
+                version = versionField.toLong()
             }
             return version
         }
 
-        this.docVersions = new ConcurrentCache<String, Long>(computeIfAbsent)
+        this.docVersions = new BoundedCache<>(computeIfAbsent, CACHE_MAX_SIZE, CachePolicy.NONE, CACHE_INITIAL_CAPACITY)
     }
 
     void setSupport(AbstractJiraUseCaseSupport support) {

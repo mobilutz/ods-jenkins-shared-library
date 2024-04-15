@@ -1,5 +1,6 @@
 package org.ods.orchestration.util
 
+import org.ods.util.cache.ConcurrentCache
 import util.SpecHelper
 
 class ConcurrentCacheSpec extends SpecHelper {
