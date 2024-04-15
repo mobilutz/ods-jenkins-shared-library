@@ -142,8 +142,8 @@ class BoundedCache<K, V> implements Cache<K, V>, Bounded {
                 }
             }
         }
+        V value = null
         try {
-            V value
             try {
                 value = valueProducer(key)
             } catch (e) {
@@ -159,12 +159,12 @@ class BoundedCache<K, V> implements Cache<K, V>, Bounded {
                     cache.replace(key, lock, value)
                 }
             }
-            return value
         } finally {
             synchronized (lock) {
                 lock.notifyAll()
             }
         }
+        return value
     }
 
     /**
