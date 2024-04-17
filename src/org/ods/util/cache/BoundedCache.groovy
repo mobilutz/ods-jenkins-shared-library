@@ -115,24 +115,25 @@ class BoundedCache<K, V> implements Cache<K, V>, Bounded {
             oldValue = tryLock(cache, key, lock)
             // The operation takes effect here, iif oldValue is null or FULL or an instance of V.
             if (oldValue.is(null)) {
-                break
+                break // Successfully locked
             }
             if (oldValue instanceof V) {
-                return oldValue
+                return oldValue // There is already a cached value
             }
             if (oldValue.is(FULL)) {
-                return valueProducer(key)
+                return valueProducer(key) // The cache is full and there is no eviction policy. Just produce the value.
             }
-            assert oldValue instanceof Lock : oldValue.class.name
             while (true) {
+                assert oldValue instanceof Lock : oldValue.class.name
                 synchronized (oldValue) {
                     synchronized (mutex) {
-                        def check = read(cache, key) // Check that the lock has not been released, yet.
+                        def check = cache.get(key) // Check that the lock has not been released, yet.
                         // The operation takes effect here, iif check is an instance of V.
                         if (!oldValue.is(check)) {
                             if (check instanceof V) {
                                 return check
                             }
+                            // The lock was released, but the entry was locked again.
                             oldValue = check
                             continue // Synchronize on the new lock.
                         }
@@ -148,15 +149,15 @@ class BoundedCache<K, V> implements Cache<K, V>, Bounded {
                 value = valueProducer(key)
             } catch (e) {
                 synchronized (mutex) {
-                    cache.remove(key, lock)
+                    cache.remove(key, lock) // Release the lock
                 }
                 throw e
             }
             synchronized (mutex) {
                 if (value.is(null)) {
-                    cache.remove(key, lock)
+                    cache.remove(key, lock) // No value was produced. Release the lock.
                 } else {
-                    cache.replace(key, lock, value)
+                    cache.replace(key, lock, value) // Replace the lock with the produced value.
                 }
             }
         } finally {
@@ -195,9 +196,7 @@ class BoundedCache<K, V> implements Cache<K, V>, Bounded {
         def oldValue
         def cache = getCache()
         synchronized (mutex) {
-            if (!noGC) {
-                ((BaseCache<K>) cache).removeStaleEntries()
-            }
+            cache.removeStaleEntries()
             oldValue = cache.get(key)
             if (oldValue instanceof V) {
                 cache.remove(key)
@@ -230,7 +229,8 @@ class BoundedCache<K, V> implements Cache<K, V>, Bounded {
         def cache = getCache()
         while (true) {
             synchronized (mutex) {
-                oldValue = read(cache, key)
+                cache.removeStaleEntries()
+                oldValue = cache.get(key)
                 // The operation takes effect here, iff oldValue is null or an instance of V.
                 def result = doClear(cache, key, value, oldValue)
                 if (!result.is(null)) {
@@ -239,7 +239,7 @@ class BoundedCache<K, V> implements Cache<K, V>, Bounded {
             }
             synchronized (oldValue) {
                 synchronized (mutex) {
-                    def check = read(cache, key)
+                    def check = cache.get(key)
                     // The operation takes effect here, iff check is not oldValue.
                     if (!oldValue.is(check)) {
                         def result = doClear(cache, key, value, oldValue)
@@ -272,9 +272,7 @@ class BoundedCache<K, V> implements Cache<K, V>, Bounded {
         long size
         def cache = getCache()
         synchronized (mutex) {
-            if (!noGC) {
-                ((BaseCache<K>) cache).removeStaleEntries()
-            }
+            cache.removeStaleEntries()
             size = cache.size()
         } // The operation takes effect here.
         return size & 0xffffffffL // In case cache.size() overflows.
@@ -293,7 +291,7 @@ class BoundedCache<K, V> implements Cache<K, V>, Bounded {
         if (!noGC) {
             def cache = getCache()
             synchronized (mutex) {
-                ((BaseCache<K>) cache).removeStaleEntries()
+                cache.removeStaleEntries()
             }
         }
         return maxSize
@@ -311,9 +309,7 @@ class BoundedCache<K, V> implements Cache<K, V>, Bounded {
     String toString() {
         def cache = getCache()
         synchronized (mutex) {
-            if (!noGC) {
-                ((BaseCache<K>) cache).removeStaleEntries()
-            }
+            cache.removeStaleEntries()
             return cache.toString()
         } // The operation takes effect here.
     }
@@ -338,99 +334,50 @@ class BoundedCache<K, V> implements Cache<K, V>, Bounded {
     @NonCPS
     private tryLock(BaseCache<K> cache, K key, Lock lock) {
         synchronized (mutex) {
-            if (!noGC) {
-                cache.removeStaleEntries()
-            }
+            cache.removeStaleEntries()
             return cache.putIfAbsent(key, lock)
         }
     }
 
     @NonCPS
-    private read(BaseCache<K> cache, K key) {
-        synchronized (mutex) {
-            if (!noGC) {
-                cache.removeStaleEntries()
-            }
-            return cache.get(key)
-        }
-    }
-
-    @NonCPS
     private BaseCache<K> getCache() {
-        return noGC ? getStrongCache() : getSoftCache()
-    }
-
-    @NonCPS
-    private BaseCache<K> getStrongCache() {
-        def cache = doGetStrongCache()
+        def cache = doGetCache()
         if (!cache.is(null)) {
             return cache
         }
         synchronized (baseMutex) {
-            cache = doGetStrongCache()
+            cache = doGetCache()
             if (!cache.is(null)) {
                 return cache
             }
             cache = createCache()
+            if (!noGC) {
+                cache = new SoftReference<BaseCache<K>>(cache)
+            }
             this.cache = cache
             return cache
         }
     }
 
     @NonCPS
-    private BaseCache<K> doGetStrongCache() {
+    private BaseCache<K> doGetCache() {
         def cache = cache
+        if (noGC) {
+            assert cache instanceof BaseCache<K>: cache.class.name
+            return cache
+        }
+        assert cache.is(null) || cache instanceof SoftReference<BaseCache<K>>: cache.class.name
+        cache = cache?.get()
         assert cache.is(null) || cache instanceof BaseCache<K>: cache.class.name
-        return cache
-    }
-
-    @NonCPS
-    private BaseCache<K> getSoftCache() {
-        def cache = doGetSoftCache()
-        if(!cache.is(null)) {
-            return cache
-        }
-        synchronized (baseMutex) {
-            cache = doGetSoftCache()
-            if(!cache.is(null)) {
-                return cache
-            }
-            cache = createCache()
-            this.cache = new SoftReference<BaseCache<K>>(cache)
-            return cache
-        }
-    }
-
-    @NonCPS
-    private BaseCache<K> doGetSoftCache() {
-        def cache = cache
-        if (cache.is(null)) {
-            return null
-        }
-        assert cache instanceof SoftReference<BaseCache<K>>: cache.class.name
-        cache = cache.get()
-        if (cache.is(null)) {
-            return null
-        }
-        assert cache instanceof BaseCache<K>: cache.class.name
         return cache
     }
 
     @NonCPS
     private BaseCache<K> createCache() {
         def maxSize = maxSize
-        return maxSize ? createUnboundedCache() : createBoundedCache(maxSize)
-    }
-
-    @NonCPS
-    private BaseCache<K>  createUnboundedCache() {
-        def initialCapacity = initialCapacity
-        return new BaseCache<>(initialCapacity, noGC)
-    }
-
-    @NonCPS
-    private BaseCache<K>  createBoundedCache(long maxSize) {
-        def initialCapacity = initialCapacity
+        if (!maxSize) {
+            return new BaseCache<>(initialCapacity, noGC)
+        }
         BaseCache<K> cache
         switch (policy) {
             case CachePolicy.NONE:
@@ -459,25 +406,14 @@ class BoundedCache<K, V> implements Cache<K, V>, Bounded {
         private static final int MAX_ENTRIES_TO_RECLAIM = 8;
         private final ReferenceQueue<V> referenceQueue
 
-        BaseCache(int initialCapacity, boolean noGC, boolean accessOrder) {
+        BaseCache(int initialCapacity, boolean noGC, boolean accessOrder = false) {
             super(initialCapacity ?: DEFAULT_INITIAL_CAPACITY, DEFAULT_LOAD_FACTOR, accessOrder)
             referenceQueue = noGC ? null : new ReferenceQueue<V>()
         }
 
         @Override
         @NonCPS
-        Object putIfAbsent(K key, Object value) {
-            def oldValue = get(key)
-            if (!oldValue.is(null)) {
-                return oldValue
-            }
-            return doPut(key, value)
-        }
-
-        @Override
-        @NonCPS
         Object get(Object key) {
-            removeStaleEntries()
             def value = super.get(key)
             return unwrap(value)
         }
@@ -485,12 +421,6 @@ class BoundedCache<K, V> implements Cache<K, V>, Bounded {
         @Override
         @NonCPS
         Object put(K key, Object value) {
-            removeStaleEntries()
-            return doPut(key, value)
-        }
-
-        @NonCPS
-        protected Object doPut(K key, Object value) {
             try {
                 def wrapped = wrap(key, value)
                 return super.put(key, wrapped)
@@ -502,21 +432,20 @@ class BoundedCache<K, V> implements Cache<K, V>, Bounded {
         @Override
         @NonCPS
         Object remove(Object key) {
-            removeStaleEntries()
             def oldValue = super.remove(key)
             return unwrap(oldValue)
         }
 
         @Override
         @NonCPS
-        boolean remove(Object key, Object value) {
-            removeStaleEntries()
-            def oldValue = get(key)
-            oldValue = unwrap(oldValue)
-            if (value != oldValue) {
-                return false
+        boolean replace(Object key, Object oldValue, Object newValue) {
+            assert oldValue instanceof Lock : oldValue.class.name
+            try {
+                def wrapped = wrap((K) key, newValue)
+                return super.replace(key, oldValue, wrapped)
+            } finally {
+                Reference.reachabilityFence(newValue)
             }
-            return super.remove(key)
         }
 
         @NonCPS
@@ -528,23 +457,24 @@ class BoundedCache<K, V> implements Cache<K, V>, Bounded {
             SoftEntry<K, V> reference = null
             for (int i = 0; i < MAX_ENTRIES_TO_RECLAIM &&
                 (reference = (SoftEntry<K, V>) referenceQueue.poll()) != null; i++) {
-                super.remove(reference.key)
+                super.remove(reference.key, reference)
             }
         }
 
         @NonCPS
         private Object unwrap(Object value) {
+            def unwrapped = value
             if (value instanceof SoftEntry<K, V>) {
-                value = value.get()
-                if (value.is(null)) {
-                    removeStaleEntries()
+                unwrapped = value.get()
+                if (unwrapped.is(null)) {
+                    super.remove(value.key)
                 }
             }
-            return value
+            return unwrapped
         }
 
         @NonCPS
-        private Object wrap(K key, V value) {
+        private Object wrap(K key, Object value) {
             def referenceQueue = referenceQueue
             if (referenceQueue.is(null) || !(value instanceof V)) {
                 return value
@@ -578,7 +508,6 @@ class BoundedCache<K, V> implements Cache<K, V>, Bounded {
         MaxSizeCache(long maxSize, int initialCapacity, boolean noGC, boolean accessOrder = false) {
             super(initialCapacity ?: DEFAULT_INITIAL_CAPACITY, noGC, accessOrder)
             this.maxSize = maxSize
-            referenceQueue = noGC ? null : new ReferenceQueue<V>()
         }
 
         @Override
@@ -589,9 +518,12 @@ class BoundedCache<K, V> implements Cache<K, V>, Bounded {
                 return oldValue
             }
             if (size() >= maxSize) {
-                return evict()
+                def evicted = evict()
+                if (FULL.is(evicted)) {
+                    return FULL
+                }
             }
-            return doPut(key, value)
+            return put(key, value)
         }
 
         @NonCPS
@@ -626,9 +558,9 @@ class BoundedCache<K, V> implements Cache<K, V>, Bounded {
         @NonCPS
         protected Object evict() {
             def it = entrySet().iterator()
-            it.next()
+            def evicted = it.next()
             it.remove()
-            return null
+            return evicted
         }
 
     }
@@ -645,12 +577,12 @@ class BoundedCache<K, V> implements Cache<K, V>, Bounded {
         @NonCPS
         protected Object evict() {
             def it = entrySet().iterator()
-            it.next()
+            def evicted = it.next()
             while (it.hasNext()) {
-                it.next() // Linear time. To do it in constant time, we need Java 21.
+                evicted = it.next() // Linear time. To do it in constant time, we need Java 21.
             }
             it.remove()
-            return null
+            return evicted
         }
 
     }
