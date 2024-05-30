@@ -1,8 +1,8 @@
 package org.ods.services
 
+import com.cloudbees.groovy.cps.NonCPS
 @Grab(group='com.konghq', module='unirest-java', version='2.4.03', classifier='standalone')
 
-import com.cloudbees.groovy.cps.NonCPS
 import kong.unirest.Unirest
 import kong.unirest.ContentType
 import org.apache.http.client.utils.URIBuilder
@@ -68,7 +68,6 @@ class NexusService {
         config
     }
 
-    @NonCPS
     URI storeArtifact(String repository, String directory, String name, byte[] artifact, String contentType) {
         Map nexusParams = [
             'raw.directory': directory,
@@ -88,12 +87,15 @@ class NexusService {
     }
 
     @SuppressWarnings('LineLength')
-    @NonCPS
     URI storeComplextArtifact(String repository, byte[] artifact, String contentType, String repositoryType, Map nexusParams = [ : ]) {
         def restCall = Unirest.post("${this.baseURL}/service/rest/v1/components?repository={repository}")
             .routeParam('repository', repository)
             .basicAuth(this.username, this.password)
+        return processsStoreArtifactRes(repository, artifact, contentType, repositoryType, nexusParams)
+    }
 
+    @NonCPS
+    private URI processsStoreArtifactRes(String repository, byte[] artifact, String contentType, String repositoryType, Map nexusParams = [ : ]) {
         nexusParams.each { key, value ->
             restCall = restCall.field(key, value)
         }
@@ -139,7 +141,6 @@ class NexusService {
     }
 
     @SuppressWarnings(['LineLength', 'JavaIoPackageAccess'])
-    @NonCPS
     Map<URI, File> retrieveArtifact(String nexusRepository, String nexusDirectory, String name, String extractionPath) {
         // https://nexus3-ods....../repository/leva-documentation/odsst-WIP/DTP-odsst-WIP-108.zip
         String urlToDownload = "${this.baseURL}/repository/${nexusRepository}/${nexusDirectory}/${name}"
