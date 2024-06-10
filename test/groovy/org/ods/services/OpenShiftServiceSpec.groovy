@@ -2,6 +2,7 @@
 package org.ods.services
 
 import groovy.json.JsonSlurperClassic
+import org.ods.util.HelmStatusSimpleData
 import org.ods.util.ILogger
 import org.ods.util.IPipelineSteps
 import org.ods.util.Logger
@@ -246,18 +247,62 @@ class OpenShiftServiceSpec extends SpecHelper {
         then:
         result.size() == 1
         result[0].toMap() == [
-            podName: 'bar-164-6xxbw',
             podNamespace: 'foo-dev',
             podMetaDataCreationTimestamp: '2020-05-18T10:43:56Z',
             deploymentId: 'bar-164',
-            podNode: 'ip-172-31-61-82.eu-central-1.compute.internal',
-            podIp: '10.128.17.92',
             podStatus: 'Running',
-            podStartupTimeStamp: '2020-05-18T10:43:56Z',
             containers: [
                 bar: '172.30.21.196:5000/foo-dev/bar@sha256:07ba1778e7003335e6f6e0f809ce7025e5a8914dc5767f2faedd495918bee58a'
             ]
         ]
+    }
+
+    def "helm status data extraction"() {
+        given:
+        def steps = Spy(util.PipelineSteps)
+        def service = new OpenShiftService(steps, new Logger(steps, false))
+        def helmJsonText = new FixtureHelper().getResource("helmstatus.json").text
+
+        when:
+        def helmStatusData = service.helmStatus('guardians-test', 'standalone-app')
+//            OpenShiftService.DEPLOYMENT_KIND, OpenShiftService.DEPLOYMENTCONFIG_KIND,])
+        then:
+        1 * steps.sh(
+            script: 'helm -n guardians-test status standalone-app --show-resources  -o json',
+            label: 'Gather Helm status for release standalone-app in guardians-test',
+            returnStdout: true,
+        ) >> helmJsonText
+        helmStatusData.name == 'standalone-app'
+        helmStatusData.namespace == 'guardians-test'
+    }
+
+    def "helm status data extraction bad content"() {
+        given:
+        def steps = Spy(util.PipelineSteps)
+        def service = new OpenShiftService(steps, new Logger(steps, false))
+        def helmJsonText = """
+{
+  "name": "standalone-app",
+  "info": {
+    "first_deployed": "2022-12-19T09:44:32.164490076Z",
+    "last_deployed": "2024-03-04T15:21:09.34520527Z",
+    "deleted": "",
+    "description": "Upgrade complete",
+    "status": "deployed",
+    "resources" : {}
+   }
+}
+        """
+        when:
+        def helmStatusData = service.helmStatus('guardians-test', 'standalone-app')
+//            OpenShiftService.DEPLOYMENT_KIND, OpenShiftService.DEPLOYMENTCONFIG_KIND,])
+        then:
+        1 * steps.sh(
+            script: 'helm -n guardians-test status standalone-app --show-resources  -o json',
+            label: 'Gather Helm status for release standalone-app in guardians-test',
+            returnStdout: true,
+        )
+        thrown RuntimeException
     }
 
     def "helm upgrade"() {
@@ -752,7 +797,7 @@ class OpenShiftServiceSpec extends SpecHelper {
         when:
         def result = service.getConsoleUrl(steps)
 
-        then: 
+        then:
         result == routeUrl
     }
 
