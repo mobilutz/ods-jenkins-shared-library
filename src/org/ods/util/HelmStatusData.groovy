@@ -97,6 +97,7 @@ class HelmStatusData {
     String version
 
     @SuppressWarnings(['IfStatementBraces'])
+    @NonCPS
     static HelmStatusData fromJsonObject(Object object) {
         try {
             def jsonObject = ensureMap(object, "")
@@ -133,7 +134,7 @@ class HelmStatusData {
                         resources << resourceData
                     }
                 }
-                resourcesMap << [(key): resources]
+                resourcesMap.put(key, resources)
             }
             info.resources = resourcesMap
             status.info = new HelmStatusInfoData(info)
@@ -145,6 +146,7 @@ class HelmStatusData {
     }
 
     @SuppressWarnings(['Instanceof'])
+    @NonCPS
     private static Map ensureMap(Object obj, String context) {
         if (obj == null) {
             return [:]
@@ -160,6 +162,7 @@ class HelmStatusData {
     }
 
     @SuppressWarnings(['Instanceof'])
+    @NonCPS
     private static List ensureList(Object obj, String context) {
         if (obj == null) {
             return []
@@ -172,6 +175,7 @@ class HelmStatusData {
     }
 
     @SuppressWarnings(['IfStatementBraces', 'Instanceof'])
+    @NonCPS
     private static HelmStatusResourceData fromJsonObjectHelmStatusResource(
         resourceJsonObject, String context) {
         def resourceObject = ensureMap(resourceJsonObject, context)
@@ -209,6 +213,7 @@ class HelmStatusData {
     }
 
     @SuppressWarnings(['PublicMethodsBeforeNonPublicMethods'])
+    @NonCPS
     static @PackageScope void handleMissingKeysOrBadTypes(List<String> missingKeys, List<String> badTypes) {
         if (missingKeys || badTypes) {
             def msgs = []
