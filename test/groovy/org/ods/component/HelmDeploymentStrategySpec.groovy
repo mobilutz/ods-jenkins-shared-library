@@ -68,6 +68,7 @@ class HelmDeploymentStrategySpec extends PipelineSpockTestBase {
             deployments: [
                 "core-deploymentMean"              : expectedDeploymentMean,
                 "core"                             : [
+                    podName                     : null,
                     podNamespace                : null,
                     podMetaDataCreationTimestamp: null,
                     deploymentId                : "core-124",
@@ -76,6 +77,7 @@ class HelmDeploymentStrategySpec extends PipelineSpockTestBase {
                 ],
                 "standalone-gateway-deploymentMean": expectedDeploymentMean,
                 "standalone-gateway"               : [
+                    podName                     : null,
                     podNamespace                : null,
                     podMetaDataCreationTimestamp: null,
                     deploymentId                : "core-124",

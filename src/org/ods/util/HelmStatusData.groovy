@@ -74,7 +74,7 @@ class HelmStatusData {
         }
         if (!(obj instanceof Map)) {
             def msg = context ?
-                "${context}: expected JSON object, found ${obj.getClass()}":
+                "${context}: expected JSON object, found ${obj.getClass()}" :
                 "Expected JSON object, found ${obj.getClass()}"
 
             throw new IllegalArgumentException(msg)

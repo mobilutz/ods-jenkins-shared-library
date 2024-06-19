@@ -190,6 +190,10 @@ class OpenShiftServiceSpec extends SpecHelper {
         then:
         results.size() == expected.size()
         for (int i = 0; i < results.size(); i++) {
+            // Note: podIp, podNode and podStartupTimeStamp  are no longer in type PodData.
+            // Each result is only a subset of the corresponding expected data.
+            // While it can surpise that the == assertion below would not catch this,
+            // it actually comes in handy so we can leave the original data in place.
             results[i].toMap() == expected[i]
         }
     }
@@ -201,25 +205,17 @@ class OpenShiftServiceSpec extends SpecHelper {
         def file = new FixtureHelper().getResource("pods.json")
         List<PodData> expected = [
             [
-                podName                     : 'example-be-token-6fcb4d85d6-7jr2r',
                 podNamespace                : 'proj-dev',
                 podMetaDataCreationTimestamp: '2023-07-24T11:58:29Z',
                 deploymentId                : 'example-be-token-6fcb4d85d6',
-                podNode                     : 'ip-10-32-10-30.eu-west-1.compute.internal',
-                podIp                       : '192.0.2.172',
                 podStatus                   : 'Running',
-                podStartupTimeStamp         : '2023-07-24T11:58:29Z',
                 containers                  : ['be-token': 'image-registry.openshift-image-registry.svc:5000/proj-dev/example-be-token@sha256:cc5e57f98ee789429384e8df2832a89fbf1092b724aa8f3faff2708e227cb39e']
             ],
             [
-                podName                     : 'example-be-token-6fcb4d85d6-ndp8x',
                 podNamespace                : 'proj-dev',
                 podMetaDataCreationTimestamp: '2023-07-24T11:58:29Z',
                 deploymentId                : 'example-be-token-6fcb4d85d6',
-                podNode                     : 'ip-10-32-9-69.eu-west-1.compute.internal',
-                podIp                       : '192.0.2.171',
                 podStatus                   : 'Running',
-                podStartupTimeStamp         : '2023-07-24T11:58:29Z',
                 containers                  : ['be-token': 'image-registry.openshift-image-registry.svc:5000/proj-dev/example-be-token@sha256:cc5e57f98ee789429384e8df2832a89fbf1092b724aa8f3faff2708e227cb39e']
             ]
         ]
@@ -247,6 +243,7 @@ class OpenShiftServiceSpec extends SpecHelper {
         then:
         result.size() == 1
         result[0].toMap() == [
+            podName: 'bar-164-6xxbw',
             podNamespace: 'foo-dev',
             podMetaDataCreationTimestamp: '2020-05-18T10:43:56Z',
             deploymentId: 'bar-164',

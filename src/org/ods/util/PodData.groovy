@@ -9,7 +9,7 @@ class PodData {
 
     // podName is the name of the pod.
     // Example: foo-3-vfhxb
-//    String podName
+    String podName
 
     // podNamespace is the namespace in which the pod is running.
     // Example: foo
@@ -47,6 +47,7 @@ class PodData {
     @NonCPS
     Map<String, Object> toMap() {
         [
+            podName: podName,
             podNamespace: podNamespace,
             podMetaDataCreationTimestamp: podMetaDataCreationTimestamp,
             deploymentId: deploymentId,

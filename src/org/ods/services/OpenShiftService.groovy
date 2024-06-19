@@ -1283,6 +1283,7 @@ class OpenShiftService {
         podJson.items.each { podOCData ->
             def pod = [:]
             // Only set needed data on "pod"
+            pod.podName = podOCData.metadata?.name ?: 'N/A'
             pod.podNamespace = podOCData.metadata?.namespace ?: 'N/A'
             pod.podMetaDataCreationTimestamp = podOCData.metadata?.creationTimestamp ?: 'N/A'
             pod.deploymentId = 'N/A'

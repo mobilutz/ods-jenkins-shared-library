@@ -217,8 +217,7 @@ class OdsComponentStageRolloutOpenShiftDeploymentSpec extends PipelineSpockTestB
     buildArtifacts.size() > 0
     buildArtifacts.deployments['core-deploymentMean']['type'] == 'helm'
 
-    1 * openShiftService.helmUpgrade('guardians-test', 'standalone-app', ['values.yaml'], ['registry':null, 'componentId':'core', 'imageNamespace':'guardians-test', 'imageTag':'cd3e9082'], ['--install', '--atomic'], [], true)
-    // review merge: 1 * openShiftService.helmUpgrade('foo-dev', 'bar', ['values.yaml'], ['registry':null, 'componentId':'bar', 'global.registry':null, 'global.componentId':'bar', 'imageNamespace':'foo-dev', 'imageTag':'cd3e9082', 'global.imageNamespace':'foo-dev', 'global.imageTag':'cd3e9082'], ['--install', '--atomic'], [], true)
+    1 * openShiftService.helmUpgrade('guardians-test', 'standalone-app', ['values.yaml'], ['registry':null, 'componentId':'core', 'global.registry':null, 'global.componentId':'core', 'imageNamespace':'guardians-test', 'imageTag':'cd3e9082', 'global.imageNamespace':'guardians-test', 'global.imageTag':'cd3e9082'], ['--install', '--atomic'], [], true)
   }
 
   @Unroll
