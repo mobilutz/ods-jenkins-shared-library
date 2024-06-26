@@ -192,15 +192,6 @@ class HelmDeploymentStrategy extends AbstractDeploymentStrategy {
             if (! (resource.kind in DEPLOYMENT_KINDS)) {
                 return // continues with next
             }
-            def podData = []
-            for (def i = 0; i < options.deployTimeoutRetries; i++) {
-                podData = openShift.checkForPodData(context.targetProject, options.selector, resource.name)
-                if (!podData.isEmpty()) {
-                    break
-                }
-                steps.echo("Could not find 'running' pod(s) with label '${options.selector}' - waiting")
-                steps.sleep(12)
-            }
             context.addDeploymentToArtifactURIs("${resource.name}-deploymentMean",
                 [
                     'type': 'helm',
@@ -215,7 +206,28 @@ class HelmDeploymentStrategy extends AbstractDeploymentStrategy {
                     'helmStatus': helmStatus.toMap(),
                 ]
             )
-            // looks a good place to gather the helm status information
+            def podDataContext = [
+                "targetProject=${context.targetProject}",
+                "selector=${options.selector}",
+                "name=${resource.name}",
+            ]
+            def msgPodsNotFound = "Could not find 'running' pod(s) for '${podDataContext.join(', ')}'"
+            List<PodData> podData = null
+            for (def i = 0; i < options.deployTimeoutRetries; i++) {
+                podData = openShift.checkForPodData(context.targetProject, options.selector, resource.name)
+                if (podData) {
+                    break
+                }
+                steps.echo("${msgPodsNotFound} - waiting")
+                steps.sleep(12)
+            }
+            if (!podData) {
+                throw new RuntimeException(msgPodsNotFound)
+            }
+
+            logger.debug("Helm podData for ${podDataContext.join(', ')}: " +
+                "${JsonOutput.prettyPrint(JsonOutput.toJson(podData))}")
+
             rolloutData["${resource.kind}/${resource.name}"] = podData
             // TODO: Once the orchestration pipeline can deal with multiple replicas,
             // update this to store multiple pod artifacts.
