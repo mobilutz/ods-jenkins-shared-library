@@ -449,7 +449,12 @@ class OpenShiftService {
         )
     }
 
-    // Returns data about the pods (replicas) of the deployment.
+    boolean isDeploymentKind(String kind) {
+        boolean b = kind in [DEPLOYMENTCONFIG_KIND, DEPLOYMENT_KIND]
+        b
+    }
+
+            // Returns data about the pods (replicas) of the deployment.
     // If not all pods are running until the retries are exhausted,
     // an exception is thrown.
     List<PodData> getPodDataForDeployment(String project, String kind, String podManagerName, int retries) {

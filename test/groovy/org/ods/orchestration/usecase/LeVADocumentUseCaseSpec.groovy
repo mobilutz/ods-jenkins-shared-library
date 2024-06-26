@@ -1,6 +1,7 @@
 package org.ods.orchestration.usecase
 
 import groovy.json.JsonSlurper
+import groovy.json.JsonSlurperClassic
 import groovy.util.logging.Log
 import groovy.util.logging.Slf4j
 import org.apache.commons.io.FileUtils
@@ -8,6 +9,7 @@ import org.junit.Rule
 import org.junit.rules.TemporaryFolder
 import org.ods.util.ILogger
 import org.ods.services.ServiceRegistry
+import org.ods.util.PodData
 import spock.lang.Unroll
 
 import org.ods.services.JenkinsService
@@ -890,6 +892,7 @@ class LeVADocumentUseCaseSpec extends SpecHelper {
         1 * usecase.updateJiraDocumentationTrackingIssue(documentType, uri, "${docHistory.getVersion()}")
     }
 
+
     def "create IVR"() {
         given:
         jiraUseCase = Spy(new JiraUseCase(project, steps, util, Mock(JiraService), logger))
@@ -1276,6 +1279,47 @@ class LeVADocumentUseCaseSpec extends SpecHelper {
         1 * usecase.getDocumentMetadata(LeVADocumentUseCase.DOCUMENT_TYPE_NAMES[documentType], repo)
         1 * usecase.getDocumentTemplateName(documentType, repo) >> documentTemplate
         1 * usecase.createDocument(documentType, repo, _, [:], _, documentTemplate, watermarkText)
+    }
+
+    def "assemble deploymentInfo for TIR"() {
+        given:
+        def file = new FixtureHelper().getResource("deployments-data.json")
+        os.isDeploymentKind(*_) >> true
+
+        when:
+        def deploymentsData = new JsonSlurperClassic().parseText(file.text)
+        def assembledData = usecase.assembleDeployments(deploymentsData.deployments)
+
+        then:
+
+        assembledData["backend-helm-monorepo-deploymentMean"] == [
+            chartDir               : "chart",
+            repoId : "backend-helm-monorepo",
+            helmAdditionalFlags: [],
+            helmEnvBasedValuesFiles :[],
+            helmValues :[
+                    registry :"image-registry.openshift-image-registry.svc:5000",
+                    componentId :"backend-helm-monorepo"
+            ],
+            helmDefaultFlags :["--install", "--atomic"],
+            helmReleaseName :"backend-helm-monorepo",
+            selector :"app.kubernetes.io/instance=backend-helm-monorepo",
+            helmValuesFiles :["values.yaml"],
+            type :"helm", ]
+
+        assembledData["backend-helm-monorepo-release"] == [
+            releaseRevision :"2",
+            releaseName :"backend-helm-monorepo",
+            namespace: "kraemerh-dev",
+            deployDescription :"Upgrade complete",
+            resources :[
+                [kind :"Deployment", name: "backend-helm-monorepo-chart-component-a"],
+                [kind :"Deployment", name: "backend-helm-monorepo-chart-component-b"],
+                [kind :"Service", name: "backend-helm-monorepo-chart"],
+            ],
+            deployStatus :"deployed",
+            lastDeployed :"2024-06-26T12:59:51.270713404Z"
+        ]
     }
 
     def "create overall DTR"() {

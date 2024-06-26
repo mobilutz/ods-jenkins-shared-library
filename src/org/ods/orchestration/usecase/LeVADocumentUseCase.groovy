@@ -1096,7 +1096,7 @@ class LeVADocumentUseCase extends DocGenUseCase {
             deployNote   : deploynoteData,
             openShiftData: [
                 builds     : repo.data.openshift.builds ?: '',
-                deployments: repo.data.openshift.deployments ?: ''
+                deployments: assembleDeployments(repo.data.openshift.deployments ?: [:]),
             ],
             testResults: [
                 installation: installationTestData?.testResults
@@ -1128,6 +1128,69 @@ class LeVADocumentUseCase extends DocGenUseCase {
         }
 
         return this.createDocument(documentType, repo, data_, [:], modifier, getDocumentTemplateName(documentType, repo), watermarkText)
+    }
+
+    /**
+     * Helm releases become top level elements, tailor deployments are left alone.
+     */
+    Map<String, Object> assembleDeployments(Map<String, Map<String, Object>> deployments) {
+        // collect helm releases
+        Map<String, Map<String, Object>> deploymentsMeansHelm = deployments.findAll {
+            it.key.endsWith('-deploymentMean') && it.value.type == "helm"
+        }
+        Map<String, Map<String, Object>> deploymentsHelmByRelease = [:]
+        deploymentsMeansHelm.each { String deploymentName, Map<String, Object> deploymentMeanHelm ->
+            deploymentsHelmByRelease << [(deploymentMeanHelm.helmReleaseName): deploymentMeanHelm]
+        }
+        Set<String> componentsCoveredByHelm = []
+        deploymentsHelmByRelease.each { String release, Map<String, Object> deploymentMeanHelm ->
+            List<Map<String, String>> resources = deploymentMeanHelm?.helmStatus?.resources ?: []
+            resources.each {
+                if (!it?.kind) {
+                    logger.debug("skipping resource - no kind defined: ${it}")
+                    return
+                }
+                if (!it?.name) {
+                    logger.debug("skipping resource - no name defined: ${it}")
+                    return
+                }
+                if (!os.isDeploymentKind(it.kind)) {
+                    return
+                }
+                componentsCoveredByHelm << it.name
+            }
+        }
+
+        Set<String> helmReleasesCovered = []
+        Map<String, Object> deploymentsForTir = [:]
+        deployments.each { String deploymentName, Map deployment ->
+            if (deploymentName.endsWith('-deploymentMean')) {
+                if (deployment.type == "helm") {
+                    String releaseName = deployment?.helmReleaseName
+                    if (!releaseName) {
+                        logger.warn("No helmReleaseName name in ${deploymentName}: skipping")
+                        return
+                    }
+                    if (releaseName in helmReleasesCovered) {
+                        return
+                    }
+                    def withoutHelmStatus = deployment.findAll { k, v -> k != 'helmStatus' }
+                    deploymentsForTir.put("${releaseName}-deploymentMean".toString(), withoutHelmStatus)
+                    deploymentsForTir.put("${releaseName}-release".toString(), deployment.helmStatus)
+                    helmReleasesCovered << (releaseName)
+                } else {
+                    deploymentsForTir.put(deploymentName, deployment)
+                }
+            } else {
+                if (deploymentName in componentsCoveredByHelm) {
+                    return
+                } else {
+                    deploymentsForTir.put(deploymentName, deployment.findAll { k, v -> k != 'podName' } )
+                }
+            }
+        }
+        logger.debug("createTIR - assembled deployments data:${prettyPrint(toJson(deploymentsForTir))}")
+        deploymentsForTir
     }
 
     String createOverallTIR(Map repo = null, Map data = null) {
