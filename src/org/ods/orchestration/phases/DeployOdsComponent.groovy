@@ -66,6 +66,8 @@ class DeployOdsComponent {
                         "name=${deploymentName}",
                     ]
                     def msgPodsNotFound = "Could not find 'running' pod(s) for '${podDataContext.join(', ')}'"
+                    logger.debug("PARANOID-1:${msgPodsNotFound}")
+                    steps.echo("PARANOID-2 Looking for 'running' pod(s) for '${podDataContext.join(', ')}'")
                     List<PodData> podData = null
                     for (def i = 0; i < retries; i++) {
                         podData = os.checkForPodData(project.targetProject, deploymentMean.selector, deploymentName)
@@ -80,7 +82,7 @@ class DeployOdsComponent {
                         throw new RuntimeException(msgPodsNotFound)
                     }
 
-                    logger.info("Helm podData for '${podDataContext.join(', ')''}: " +
+                    logger.info("Helm podData for '${podDataContext.join(', ')}': " +
                         "${JsonOutput.prettyPrint(JsonOutput.toJson(podData))}")
 
                     // TODO: Once the orchestration pipeline can deal with multiple replicas,
