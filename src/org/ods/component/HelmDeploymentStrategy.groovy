@@ -95,7 +95,7 @@ class HelmDeploymentStrategy extends AbstractDeploymentStrategy {
 
         logger.info "Rolling out ${context.componentId} with HELM, selector: ${options.selector}"
         helmUpgrade(context.targetProject)
-        def helmStatus = helmStatus(context.targetProject)
+        HelmStatusSimpleData helmStatus = openShift.helmStatus(context.targetProject, options.helmReleaseName)
         def helmStatusMap = helmStatus.toMap()
         def deploymentResources = getDeploymentResources(helmStatus)
 
@@ -167,11 +167,6 @@ class HelmDeploymentStrategy extends AbstractDeploymentStrategy {
                 )
             }
         }
-    }
-
-    private HelmStatusSimpleData helmStatus(String targetProject) {
-        def helmStatusData = openShift.helmStatus(targetProject, options.helmReleaseName)
-        HelmStatusSimpleData.from(helmStatusData)
     }
 
     private Map<String, List<String>> getDeploymentResources(HelmStatusSimpleData helmStatus) {

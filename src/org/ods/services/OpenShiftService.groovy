@@ -6,6 +6,7 @@ import groovy.json.JsonSlurperClassic
 import groovy.transform.TypeChecked
 import groovy.transform.TypeCheckingMode
 import org.ods.util.HelmStatusData
+import org.ods.util.HelmStatusSimpleData
 import org.ods.util.ILogger
 import org.ods.util.IPipelineSteps
 import org.ods.util.PodData
@@ -156,7 +157,15 @@ class OpenShiftService {
         }
     }
 
-    HelmStatusData helmStatus(
+    HelmStatusSimpleData helmStatus(
+        String project,
+        String release
+    ) {
+        def helmStatusData = retrieveHelmStatus(project, release)
+        HelmStatusSimpleData.from(helmStatusData)
+    }
+
+    HelmStatusData retrieveHelmStatus(
         String project,
         String release
     ) {

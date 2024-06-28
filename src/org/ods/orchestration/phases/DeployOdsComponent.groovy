@@ -239,6 +239,15 @@ class DeployOdsComponent {
                         deploymentMean.helmDefaultFlags,
                         deploymentMean.helmAdditionalFlags,
                         true)
+
+                    def helmStatus = os. helmStatus(project.targetProject, deploymentMean.helmReleaseName)
+                    def helmStatusMap = helmStatus.toMap()
+                    deploymentMean.helmStatus = helmStatusMap
+                    logger.info("${this.class.name} -- HELM STATUS")
+                    logger.info(
+                        JsonOutput.prettyPrint(
+                            JsonOutput.toJson(helmStatusMap)))
+
                 }
             }
             jenkins.maybeWithPrivateKeyCredentials(secretName) { String pkeyFile ->
