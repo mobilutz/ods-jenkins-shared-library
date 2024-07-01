@@ -1307,16 +1307,12 @@ class LeVADocumentUseCaseSpec extends SpecHelper {
             helmValuesFiles :["values.yaml"],
             type :"helm", ]
 
-        assembledData["backend-helm-monorepo-release"] == [
+        assembledData["backend-helm-monorepo-deploymentStatus"] == [
             releaseRevision :"2",
             releaseName :"backend-helm-monorepo",
             namespace: "kraemerh-dev",
             deployDescription :"Upgrade complete",
-            resources :[
-                [kind :"Deployment", name: "backend-helm-monorepo-chart-component-a"],
-                [kind :"Deployment", name: "backend-helm-monorepo-chart-component-b"],
-                [kind :"Service", name: "backend-helm-monorepo-chart"],
-            ],
+            resources : "Deployment: backend-helm-monorepo-chart-component-a, backend-helm-monorepo-chart-component-b, Service: backend-helm-monorepo-chart",
             deployStatus :"deployed",
             lastDeployed :"2024-06-26T12:59:51.270713404Z"
         ]
